@@ -1,0 +1,1270 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+
+    <title>Invoice Generator</title>
+    <style>
+        * { margin: 0; box-sizing: border-box; }
+        body {
+            background: #E0E0E0;
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 20px 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: #FFF;
+            padding: 20px;
+            box-shadow: 0 15px 10px rgba(0, 0, 0, .1);
+            border-radius: 8px;
+        }
+        h1 {
+            font-size: 1.5em;
+            color: #222;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        fieldset {
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        legend {
+            font-weight: bold;
+            padding: 0 10px;
+            font-size: 1.1em;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .qty {
+            width: 12% !important;
+            margin-right: 3%;
+        }
+        .item {
+            width: 66% !important;
+            margin-right: 3%;
+        }
+        .amount {
+            width: 21% !important;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 5px;
+        }
+        .checkbox-label {
+            display: inline-block;
+            font-weight: 500;
+            margin-right: 10px;
+        }
+        .add-item-button, .generate-invoice-button, .save-invoice-button, .sendEmailButton, .downloadPdfButton {
+            width: 100%; padding: 10px;
+            margin-top: 10px; border: none;
+            background-color: #f31544;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .add-item-button:hover, .generate-invoice-button:hover, .save-invoice-button:hover, .sendEmailButton:hover, .downloadPdfButton:hover {
+            background-color: #d2133b;
+        }
+        #items div {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        #items div input {
+            width: 48%;
+        }
+        #invoiceholder {
+            width: 100%;
+            overflow-x: auto;
+        }
+        #invoice {
+            width: 100%;
+            background: #FFF;
+            padding: 20px;
+            margin: auto;
+            box-shadow: 0 15px 10px rgba(0, 0, 0, .1);
+            border-radius: 8px;
+        }
+        #invoice-top, #invoice-mid, #invoice-bot {
+            padding: 20px;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+        }
+        .column {
+            padding: 10px;
+        }
+        .left-column {
+            width: 66.66%; /* 8/12 */
+        }
+        .right-column {
+            width: 33.33%; /* 4/12 */
+        }
+        .logo {
+            width: 100px;
+            height: 100px;
+            background: url('logo.png') no-repeat;
+            background-size: contain;
+            margin-bottom: 20px;
+        }
+        .info h2, .info p, .title h1, .title p {
+            margin-bottom: 10px;
+        }
+        .info p, .title p {
+            font-size: 14px;
+            color: #666;
+            padding-top: 30px;
+            float: right;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #DDD;
+            text-align: left;
+        }
+        th {
+            background-color: #EEE;
+            font-weight: bold;
+            color: #333;
+        }
+        .total {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .legal {
+            font-size: 14px;
+            color: #999;
+            text-align: center;
+        }
+        .info{
+            padding-left: 12% !important;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Invoice Generator</h1>
+    <div class="form-group">
+        <label for="option">Select Option:</label>
+        <select class="form-control toggle-fields-option" id="option" name="option" onchange="toggleFields()">
+            <option value="">Select an option</option>
+            <option value="evcharger">EV Charger</option>
+            <option value="reroofing">Re-Roofing</option>
+            <option value="retrofit">Retrofit</option>
+        </select>
+    </div>
+    <form id="invoiceForm">
+        <fieldset>
+            <legend>Customer Information</legend>
+            <!-- Your existing customer information fields -->
+            <label for="customerName">Customer Name:</label>
+            <input type="text" id="customerName" name="customerName" required>
+            <label for="streetAddress">Street Address:</label>
+            <input type="text" id="streetAddress" name="streetAddress" required>
+            <label for="city">City:</label>
+            <input type="text" id="city" name="city" required>
+            <label for="postalCode">Postal Code:</label>
+            <input type="text" id="postalCode" name="postalCode" required>
+            <label for="phone">Phone:</label>
+            <input type="tel" id="phone" name="phone" required>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+        </fieldset>
+        <fieldset>
+            <legend>Solar Panel Details</legend>
+            <!-- Your existing solar panel details fields -->
+            <label for="panels">Number of Panels:</label>
+            <input type="number" id="panels" name="panels" required>
+            <label for="inverterType">Inverter Type:</label>
+            <select id="inverterType" name="inverterType" required>
+                <option value="String">String</option>
+                <option value="Micro">Micro</option>
+            </select>
+            <label>
+                <input type="checkbox" id="monitoring" name="monitoring">
+                <span class="checkbox-label">Online Monitoring Available</span>
+            </label>
+            <label>
+                <input type="checkbox" id="squirrelGuard" name="squirrelGuard">
+                <span class="checkbox-label">Squirrel Guard Installed</span>
+            </label>
+            <label>
+                <input type="checkbox" id="repairWork" name="repairWork">
+                <span class="checkbox-label">Repair Work Needed</span>
+            </label>
+            <div id="cellTypeContainer" style="display: none;">
+                <label for="cellType">Cell Type:</label>
+                <select id="cellType" name="cellType" onchange="updateQuantityAndAmount()">
+                    <option value="60">60 Cells</option>
+                    <option value="72">72 Cells</option>
+                </select>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>Invoice Items</legend>
+            <div id="itemsContainer">
+                <div class="item-row">
+                    <label for="quantity[]">Quantity:</label>
+                    <input type="number" name="quantity[]" min="1" required>
+                    <label for="item[]">Item:</label>
+                    <select name="item[]" class="item-dropdown">
+                        <option value="">Select an item</option>
+                        <option value="Investigate and initiate repair on roof">Investigate and initiate repair on roof</option>
+                        <option value="Take down solar panels for panels for reroofing, re-install after reroofing and test">Take down solar panels for panels for reroofing, re-install after reroofing and test</option>
+                        <option value="Investigate and initiate repair on the solar power system">Investigate and initiate repair on the solar power system</option>
+                        <option value="Trunkey installation of consumption monitoring and intergrate with SolarEdge monitoring">Trunkey installation of consumption monitoring and intergrate with SolarEdge monitoring</option>
+                    </select>
+                    <div class="custom-item-container">
+                        <input type="text" name="customItem[]" placeholder="Enter custom item" class="custom-item-input">
+                    </div>
+                    <label for="amount[]">Amount:</label>
+                    <input type="number" name="amount[]" step="0.01" min="0" required>
+                </div>
+            </div>
+            <button type="button" class="add-item-button">Add Item</button>
+        </fieldset>
+        <fieldset>
+            <legend>Addition Notes</legend>
+            <div id="notesContainer">
+                <label for="notes">Additonal Notes</label>
+                <input type="text" id="notes" name="notes" required>
+            </div>
+        </fieldset>
+        <button type="button" class="generate-invoice-button">Generate Invoice</button>
+        <button type="button" class="save-invoice-button" onclick="saveInvoice()">Save Invoice</button>
+        <button type="button" class="downloadPdfButton" id="downloadPdfButton" onclick="downloadPdf()">Download PDF</button>
+        <button type="button" class="sendEmailButton" id="sendEmailButton">Send Email</button>
+    </form>
+</div>
+<div id="invoice" class="invoice-container" style="display: none;">
+    <!-- The invoice HTML content will be dynamically inserted here -->
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.8.4/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.8.4/firebase-firestore.js"></script>
+<script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+
+
+<script type="module">
+    document.querySelector('.save-invoice-button').addEventListener('click', saveInvoice);
+    document.querySelector('.downloadPdfButton').addEventListener('click', downloadPdf);
+    document.querySelector('.sendEmailButton').addEventListener('click', sendEmail);
+    document.getElementById('option').addEventListener('change', toggleFields);
+    document.getElementById('cellType').addEventListener('change', updateQuantityAndAmount);
+    document.getElementById('panels').addEventListener('input', updateQuantityAndAmount);
+
+    // Firebase imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-analytics.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
+
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyBt-wH8g6UBlYFc8PTFmDHs6EqBNEv2p5s",
+        authDomain: "ndes-1b34e.firebaseapp.com",
+        projectId: "ndes-1b34e",
+        storageBucket: "ndes-1b34e.appspot.com",
+        messagingSenderId: "953823233670",
+        appId: "1:953823233670:web:db1c8d562d9e7d4a21c1cd6d7b1",
+        measurementId: "G-N2Q93J0SVB"
+    };
+
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getFirestore(app);
+
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelector('.add-item-button').addEventListener('click', function() {
+            // Your existing add item logic
+            const itemContainer = document.getElementById('itemsContainer');
+            const itemRow = document.createElement('div');
+            itemRow.className = 'item-row';
+            itemRow.innerHTML = `
+            <label for="quantity[]">Quantity:</label>
+            <input type="number" name="quantity[]" min="1" required>
+
+            <label for="item[]">Item:</label>
+            <select name="item[]" class="item-dropdown">
+                <option value="">Select an item</option>
+                <option value="Solar Panel">Solar Panel</option>
+                <option value="Inverter">Inverter</option>
+                <option value="Battery">Battery</option>
+                <option value="Custom">Custom</option>
+            </select>
+            <div class="custom-item-container">
+                <input type="text" name="customItem[]" placeholder="Enter custom item" class="custom-item-input">
+            </div>
+
+            <label for="amount[]">Amount:</label>
+            <input type="number" name="amount[]" step="0.01" min="0" required>
+        `;
+            itemContainer.appendChild(itemRow);
+        });
+
+        document.addEventListener('change', function(event) {
+            if (event.target.classList.contains('item-dropdown')) {
+                // Your existing custom item logic
+                const customItemContainer = event.target.nextElementSibling;
+                if (event.target.value === 'Custom') {
+                    customItemContainer.style.display = 'block';
+                } else {
+                    customItemContainer.style.display = 'none';
+                    customItemContainer.querySelector('.custom-item-input').value = '';
+                }
+            }
+        });
+
+        document.querySelector('.generate-invoice-button').addEventListener('click', function() {
+            const form = document.getElementById('invoiceForm');
+            const formData = new FormData(form);
+            const customerName = formData.get('customerName');
+            const streetAddress = formData.get('streetAddress');
+            const city = formData.get('city');
+            const postalCode = formData.get('postalCode');
+            const phone = formData.get('phone');
+            const email = formData.get('email');
+            const panels = formData.get('panels');
+            const inverterType = formData.get('inverterType');
+            const monitoring = formData.get('monitoring') ? 'Yes' : 'No';
+            const squirrelGuard = formData.get('squirrelGuard') ? 'Yes' : 'No';
+            const repairWork = formData.get('repairWork') ? 'Yes' : 'No';
+            const depositAmount = parseFloat(formData.get('depositAmount'));
+            const items = formData.getAll('item[]');
+            const notes = formData.get('notes');
+            const customItems = formData.getAll('customItem[]');
+            const quantities = formData.getAll('quantity[]');
+            const amounts = formData.getAll('amount[]');
+            const formattedExpirationDate = new Date(new Date().setDate(new Date().getDate() + 30)).toLocaleDateString();
+
+            let itemListHTML = '';
+            let totalAmount = 0;
+
+            items.forEach((item, index) => {
+                const itemName = item === 'Custom' ? customItems[index] : item;
+                const quantity = quantities[index];
+                const amount = parseFloat(amounts[index]);
+                totalAmount += amount;
+                itemListHTML += `
+                <tr>
+                    <td>${quantity}</td>
+                    <td>${itemName}</td>
+                    <td>$${amount.toFixed(2)}</td>
+                </tr>
+            `;
+            });
+
+            const hst = totalAmount * 0.13; // Assuming HST is 13%
+            const totalIncludingHST = totalAmount + hst;
+
+            const hstHtml = `
+            <tr>
+                <th colspan="2" style="float:right;">HST (13%)</th>
+                <th>$${hst.toFixed(2)}</th>
+            </tr>
+        `;
+
+            const invoiceHtml = `
+            <html>
+                <head>
+                    <title>Invoice</title>
+                    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,900,700,500,300,100">
+                    <style>
+                        body { font-family: 'Roboto', sans-serif; padding: 0px; background: white; margin-left:0px;}
+                        #invoice { width: 100%; background: #FFF; margin: 21px; box-shadow: 0 15px 10px rgba(0, 0, 0, .1); border-radius: 8px; }
+                        #invoice-top, #invoice-mid, #invoice-bot { padding: 20px; }
+                        .row { display: flex; justify-content: space-between; }
+                        .column { padding-left: 0px; margin-left:0px }
+                        .left-column { width: 66.66%; }
+                        .right-column { width: 33.33%; }
+                        .logo { width: 100px; height: 100px; background: url('logo.png') no-repeat; background-size: contain; margin-bottom: 20px; }
+                        .info h2, .info p, .title h1, .title p { margin-bottom: 10px; }
+                        .info p, .title p { font-size: 14px; color: #666; }
+                        table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px; /* Space below the table */
+}
+
+/* Header styles */
+thead {
+    background-color: #f2f2f2; /* Light gray background */
+}
+
+thead th {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd; /* Bottom border for header cells */
+}
+
+/* Body row styles */
+tbody td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd; /* Bottom border for all cells */
+}
+
+/* Footer row styles */
+tfoot {
+    background-color: #f9f9f9; /* Lighter background for footer */
+}
+
+tfoot th, tfoot td {
+    padding: 10px;
+    text-align: right;
+    border-top: 1px solid #ddd; /* Top border for footer cells */
+}
+
+/* Total row styles */
+tfoot .total {
+    font-weight: bold;
+}
+
+/* Notes row styles */
+tfoot #notesRow {
+    font-size: 21px;
+    color: red;
+    font-style: bold;
+}
+
+/* Responsive styling for smaller screens */
+@media (max-width: 768px) {
+    table {
+        font-size: 14px; /* Decrease font size on smaller screens */
+    }
+    thead th, tbody td, tfoot th, tfoot td {
+        padding: 8px; /* Decrease padding on smaller screens */
+    }
+}
+
+                        .total { font-size: 18px; font-weight: bold; color: #333; }
+                        .legal { font-size: 14px; color: #999; text-align: center; }
+                        .info1 { font-size: 14px; color: #999; margin-left:3%; margine-bottom:0%}
+                        .banner { width: 100%; height: auto; }
+                        .heading { text-align: center; font-size:12px; }
+                        .photo { width: 100%; display: flex; justify-content: center; }
+                        .images { padding:1%; }
+                        .phara { width: 93%; margin:auto; text-align: justify; padding-bottom: 12%; }
+                    </style>
+                </head>
+                <body id="body">
+                    <div class="invoice-container">
+                        <div id="invoice-top">
+                            <div class="row">
+                                <div class="column left-column">
+                                    <div class="info">
+                                        <div class="logo">
+                                            <img src="https://www.gta-solar.com/wp-content/themes/newdawner221/images/main-logo.png">
+                                        </div>
+                                        <p style="font-size:12px;">Harness the power all around us and make the world better place for everyone</p>
+                                        <p>Tel: 416-855-9377  |   Fax: 416-477-5306  |    sales@newdawn-es.com</p>
+                                        <label>To: </label>
+                                        <p>${customerName}</p>
+                                        <p>${streetAddress}</p>
+                                        <p>${city}, ${postalCode}</p>
+                                        <p>Phone: ${phone}</p>
+                                        <p>Email: ${email}</p>
+                                    </div>
+                                </div>
+                                <div class="column right-column">
+                                    <div class="title">
+                                        <p style="font-style:italic; font-size:66px; margin:0px; color:grey; text-align:right;">Quote</p>
+                                        <p style="text-align:right;">Date: ${new Date().toLocaleDateString()}</p>
+                                        <p style="text-align:right;">Customer ID: NDES${streetAddress}</p>
+                                        <p style="text-align:right;">Quote Expiration: ${formattedExpirationDate}</p><br>
+                                        <p style="text-align:right;">Number of Panels: ${panels}</p>
+                                        <p style="text-align:right;">Inverter Type: ${inverterType}</p>
+                                        <p style="text-align:right;">Online Monitoring Available: ${monitoring}</p>
+                                        <p style="text-align:right;">Squirrel Guard Installed: ${squirrelGuard}</p>
+                                        <p style="text-align:right;">Repair Work Needed: ${repairWork}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="invoice-bot">
+                            <p>Deposit Amount: $${depositAmount.toFixed(2)}</p>
+                            <table id="itemsTable" style="margin-bottom:0px !important;">
+                              <thead>
+                                  <tr>
+                                      <th>Quantity</th>
+                                      <th>Item</th>
+                                      <th>Amount</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  ${itemListHTML}
+                              </tbody>
+                              <tfoot>
+                                  <tr id="notesRow">
+                                      <td colspan="3" style="text-align:center; color:red;" id="notesDisplay">${notes}</td>
+                                  </tr>
+                                  <tr>
+                                      <th colspan="2" class="total">Sub Total</th>
+                                      <th class="total">$${totalAmount}</th>
+                                  </tr>
+                                  <tr>
+                                      <th colspan="2" class="HST">HST (13%)</th>
+                                      <th>$${hst.toFixed(2)}</th>
+                                  </tr>
+                                  <tr>
+                                      <th colspan="2" class="total">Total</th>
+                                      <th class="total">$${totalIncludingHST.toFixed(2)}</th>
+                                  </tr>
+                              </tfoot>
+                          </table>
+
+                        </div>
+                            <div class="info1">
+                                <p style="color:blue; margin-left:3%;">Quotation prepared by: </p>
+                                <p style="margin-left:3%;">This is a quotation on the goods named above, subject to the conditions noted below:</p>
+                                <p style="margin-left:3%;"> 1. Quote valid for 30 days and subject to field verification </p>
+                                <p style="margin-left:3%;">2. ${depositAmount} deposit required to start the job </p>
+                                <p style="margin-left:3%;"> 3. email payment to info@newdawn-es.com </p>
+                                <p style="margin-left:3%;">To accept this quotation, sign here and return: _______________________________________________  </p><br>
+                            </div>
+                            <div class="legal">
+                                <p>HST#:844183327 RT0001</p>
+                                <p>Thank you for your business!</p>
+                                <p>D3 - 8865 Woodbine Ave, Suite 102, Markham, ON L3R 5G1, Canada</p><br>
+                            </div>
+                            <div class="banner">
+                                <img src='banner.jpg' width="100%">
+                            </div>
+                            <div class="heading">
+                                <h1>COMPANY PROFILE - NEW DAWN ENERGY SOLUTIONS</h1>
+                            </div>
+                            <div class="photo">
+                                <div class="row">
+                                    <div class="col-3">
+                                        <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/botp2016-j.png">
+                                    </div>
+                                    <div class="col-3">
+                                        <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/logo2_03.png">
+                                    </div>
+                                    <div class="col-3">
+                                        <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/logo4_03.png">
+                                    </div>
+                                    <div class="col-3">
+                                        <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/logo1_03.png">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="phara">
+                                <p>
+                                    New Dawn Energy Solutions is an energy auditor, custom designer and systems integrator of energy Systems for residential and
+                                    commercial customers. We offer turnkey solutions and committed to providing our customers with the highest quality products,
+                                    services and support from inception of a project through the entire project lifecycle. We help our clients find an energy
+                                    solution that is best suited to our clients’ specific needs. Our holistic approach in evaluating customers’ need and
+                                    implementing an appropriate energy solutions produce optimum results to our customers.
+                                </p>
+                                <p>
+                                    Key personnel at New Dawn Energy Solutions have more than 100 year years of combined power industry experience and had
+                                    designed & installed numerous energy systems. We continuously research the latest products in evolving solar and conservation
+                                    technologies, identify and establish relationships with manufacturers to provide our customers with the best options for their
+                                    power system needs. Our expertise and experience in interconnecting PV systems to the electrical grid allow projects to proceed
+                                    without delay.
+                                </p>
+                                <p>
+                                    We have been recognized by the Solar Power World, Home Stars and Trusted Pro organizations for the work we did in 2016, 2017.
+                                    We possess A+ rating with Better Business Bureaus (BBB) and do read our customers’ reviews posted at Homestars and TrustedPros.
+                                </p>
+                            </div>
+                        </div>
+                        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"><\/script>
+                        <script>
+                         window.onload = () => {
+							setTimeout(function(){
+							alert(1);
+							const invoiceContent = document;
+							html2pdf().from(invoiceContent).toPdf().get('pdf').then(pdf => {
+                                // Automatically download the PDF
+                                pdf.save('invoice_new.pdf');
+                            });
+                        }, 3000);
+                         }
+                        <\/script>
+                    </body>
+
+                </html>
+            `;
+            document.getElementById('invoice').innerHTML = invoiceHtml;
+            const invoiceWindow = window.open('', '_blank');
+            invoiceWindow.document.open();
+            invoiceWindow.document.write(invoiceHtml);
+            invoiceWindow.document.close();
+
+            // Set a timeout of 3 seconds to ensure the page is fully loaded
+            setTimeout(() => {
+                // Wait for the new window to load
+                invoiceWindow.onload = () => {
+                    // Select the new window's content
+                    const invoiceContent = document.getElementById("invoice");
+
+                    // Convert the content to a PDF
+                    // html2pdf().from(invoiceContent).toPdf().get('pdf').then(pdf => {
+                        // Automatically download the PDF
+                        // pdf.save('invoice.pdf');
+                        // Optionally, you can close the new window
+                        // invoiceWindow.close();
+                    // });
+                };
+
+                // Handle the case where `onload` event might not fire (fallback)
+                if (invoiceWindow.document.readyState === 'complete') {
+                    invoiceWindow.onload(); // Ensure `onload` is called if the document is already loaded
+                }
+            }, 3000); // 3000 milliseconds = 3 seconds
+
+        })
+    });
+
+    function toggleFields() {
+        const option = document.getElementById('option').value;
+        const cellTypeContainer = document.getElementById('cellTypeContainer');
+        const panelDetailsContainer = document.getElementById('panels');
+        if (option === 'reroofing') {
+            cellTypeContainer.style.display = 'block';
+            panelDetailsContainer.addEventListener('change', updateQuantityAndAmount);
+        } else {
+            cellTypeContainer.style.display = 'none';
+            panelDetailsContainer.removeEventListener('change', updateQuantityAndAmount);
+        }
+    }
+
+    function updateQuantityAndAmount() {
+        const panels = parseInt(document.getElementById('panels').value);
+        const cellType = document.getElementById('cellType').value;
+        const quantityField = document.querySelector('[name="quantity[]"]');
+        const amountField = document.querySelector('[name="amount[]"]');
+        let quantity = 0;
+        let rate = 0;
+
+        if (cellType === '60') {
+            quantity = panels;
+            rate = 115;
+        } else if (cellType === '72') {
+            quantity = panels;
+            rate = 148;
+        }
+
+        quantityField.value = quantity;
+        amountField.value = (quantity * rate).toFixed(2);
+    }
+
+    async function saveInvoice() {
+        try {
+            const invoiceForm = document.getElementById('invoiceForm');
+            const customerName = invoiceForm.customerName.value;
+            const streetAddress = invoiceForm.streetAddress.value;
+            const city = invoiceForm.city.value;
+            const postalCode = invoiceForm.postalCode.value;
+            const phone = invoiceForm.phone.value;
+            const email = invoiceForm.email.value;
+            const panels = invoiceForm.panels.value;
+            const inverterType = invoiceForm.inverterType.value;
+            const monitoring = invoiceForm.monitoring.checked;
+            const squirrelGuard = invoiceForm.squirrelGuard.checked;
+            const repairWork = invoiceForm.repairWork.checked;
+            const cellType = invoiceForm.cellType.value;
+            const notes = invoiceForm.notes.value;
+
+            const items = [];
+            Array.from(invoiceForm.querySelectorAll('.item-row')).forEach(itemRow => {
+                const qty = itemRow.querySelector('[name="quantity[]"]').value;
+                const item = itemRow.querySelector('.item-dropdown').value;
+                const amount = itemRow.querySelector('[name="amount[]"]').value;
+                items.push({ quantity: qty, item: item, amount: amount });
+            });
+
+            const invoiceData = {
+                customerName,
+                streetAddress,
+                city,
+                postalCode,
+                phone,
+                email,
+                panels,
+                inverterType,
+                monitoring,
+                squirrelGuard,
+                repairWork,
+                items,
+                notes,
+                cellType
+                // Add other necessary data here
+            };
+
+            // Example of saving to Firestore
+            const docRef = await addDoc(collection(db, "invoices"), invoiceData);
+            console.log("Invoice saved with ID: ", docRef.id);
+
+            // Optionally, show a success message or redirect to another page
+            alert("Invoice saved successfully!");
+        } catch (error) {
+            console.error("Error saving invoice: ", error);
+            alert("Error saving invoice. Please try again.");
+        }
+    }
+
+    async function downloadPdf() {
+        try {
+            // Check if jsPDF and html2canvas are loaded
+            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+                throw new Error('jsPDF library is not loaded properly.');
+            }
+
+            if (typeof html2canvas === 'undefined') {
+                throw new Error('html2canvas library is not loaded properly.');
+            }
+
+            const { jsPDF } = window.jspdf;
+
+            const invoice = document.getElementById('invoice');
+            invoice.innerHTML = createInvoice();
+            invoice.style.display = 'block';
+
+            const inv = document.getElementById("#invoice-top");
+
+            const canvas = await html2canvas(invoice, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'pt', 'a4');
+
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save('invoice.pdf');
+        } catch (error) {
+            console.error('Error generating PDF:', error.message);
+        } finally {
+            // invoice.style.display = 'none';
+        }
+    }
+    // Initialize EmailJS with your public key
+     // Replace with your actual Public Key
+
+    // Define the sendEmail function
+    // export function sendEmail() {
+    //     // Retrieve form data
+    //     const form = document.getElementById('invoiceForm');
+    //         const formData = new FormData(form);
+    //         const customerName = formData.get('customerName');
+    //         const streetAddress = formData.get('streetAddress');
+    //         const city = formData.get('city');
+    //         const postalCode = formData.get('postalCode');
+    //         const phone = formData.get('phone');
+    //         const email = formData.get('email');
+    //         const panels = formData.get('panels');
+    //         const inverterType = formData.get('inverterType');
+    //         const monitoring = formData.get('monitoring') ? 'Yes' : 'No';
+    //         const squirrelGuard = formData.get('squirrelGuard') ? 'Yes' : 'No';
+    //         const repairWork = formData.get('repairWork') ? 'Yes' : 'No';
+    //         const depositAmount = parseFloat(formData.get('depositAmount'));
+    //         const items = formData.getAll('item[]');
+    //         const notes = formData.get('notes');
+    //         const customItems = formData.getAll('customItem[]');
+    //         const quantities = formData.getAll('quantity[]');
+    //         const amounts = formData.getAll('amount[]');
+    //         const formattedExpirationDate = new Date(new Date().setDate(new Date().getDate() + 30)).toLocaleDateString();
+
+    //         let itemListHTML = '';
+    //         let totalAmount = 0;
+
+    //         items.forEach((item, index) => {
+    //             const itemName = item === 'Custom' ? customItems[index] : item;
+    //             const quantity = quantities[index];
+    //             const amount = parseFloat(amounts[index]);
+    //             totalAmount += amount;
+    //             itemListHTML += `
+    //                 <tr>
+    //                     <td>${quantity}</td>
+    //                     <td>${itemName}</td>
+    //                     <td>$${amount.toFixed(2)}</td>
+    //                 </tr>
+    //             `;
+    //         });
+
+    //         const hst = totalAmount * 0.13; // Assuming HST is 13%
+    //         const totalIncludingHST = totalAmount + hst;
+
+    //         const hstHtml = `
+    //             <tr>
+    //                 <th colspan="2" style="float:right;">HST (13%)</th>
+    //                 <th>$${hst.toFixed(2)}</th>
+    //             </tr>
+    //         `;
+
+    //     // Generate invoice HTML content
+    //     const invoiceHtml = `
+    //         <html>
+    //             <head>
+    //                 <title>Invoice</title>
+    //                 <style>
+    //                     body { font-family: 'Roboto', sans-serif; padding: 0; background: white; margin-left:0; }
+    //                     #invoice { width: 100%; background: #FFF; margin: 21px; box-shadow: 0 15px 10px rgba(0, 0, 0, .1); border-radius: 8px; }
+    //                     #invoice-top, #invoice-mid, #invoice-bot { padding: 20px; }
+    //                     .row { display: flex; justify-content: space-between; }
+    //                     .column { padding-left: 0; margin-left:0 }
+    //                     .left-column { width: 66.66%; }
+    //                     .right-column { width: 33.33%; }
+    //                     .logo { width: 100px; height: 100px; background: url('https://www.gta-solar.com/wp-content/themes/newdawner221/images/main-logo.png') no-repeat; background-size: contain; margin-bottom: 20px; }
+    //                     .info h2, .info p, .title h1, .title p { margin-bottom: 10px; }
+    //                     .info p, .title p { font-size: 14px; color: #666; }
+    //                     table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    //                     thead { background-color: #f2f2f2; }
+    //                     thead th { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    //                     tbody td { padding: 10px; border-bottom: 1px solid #ddd; }
+    //                     tfoot { background-color: #f9f9f9; }
+    //                     tfoot th, tfoot td { padding: 10px; text-align: right; border-top: 1px solid #ddd; }
+    //                     tfoot .total { font-weight: bold; }
+    //                     tfoot #notesRow { font-size: 21px; color: red; font-style: bold; }
+    //                     @media (max-width: 768px) { table { font-size: 14px; } thead th, tbody td, tfoot th, tfoot td { padding: 8px; } }
+    //                     .total { font-size: 18px; font-weight: bold; color: #333; }
+    //                     .legal { font-size: 14px; color: #999; text-align: center; }
+    //                     .info1 { font-size: 14px; color: #999; margin-left:3%; }
+    //                     .banner { width: 100%; height: auto; }
+    //                     .heading { text-align: center; font-size:12px; }
+    //                     .photo { width: 100%; display: flex; justify-content: center; }
+    //                     .images { padding:1%; }
+    //                     .phara { width: 93%; margin:auto; text-align: justify; padding-bottom: 12%; }
+    //                 </style>
+    //             </head>
+    //             <body>
+    //                 <div class="invoice-container">
+    //                     <div id="invoice-top">
+    //                         <div class="row">
+    //                             <div class="column left-column">
+    //                                 <div class="info">
+    //                                     <div class="logo">
+    //                                         <img src="https://newdawn-es.com/wp-content/uploads/2016/12/logo_03.png">
+    //                                     </div>
+    //                                     <p style="font-size:12px;">Harness the power all around us and make the world better place for everyone</p>
+    //                                     <p>Tel: 416-855-9377  |   Fax: 416-477-5306  |    sales@newdawn-es.com</p>
+    //                                     <label>To: </label>
+    //                                     <p>${customerName}</p>
+    //                                     <p>${streetAddress}</p>
+    //                                     <p>${city}, ${postalCode}</p>
+    //                                     <p>Phone: ${phone}</p>
+    //                                     <p>Email: ${email}</p>
+    //                                 </div>
+    //                             </div>
+    //                             <div class="column right-column">
+    //                                 <div class="title">
+    //                                     <p style="font-style:italic; font-size:66px; margin:0px; color:grey; text-align:right;">Quote</p>
+    //                                     <p style="text-align:right;">Date: ${new Date().toLocaleDateString()}</p>
+    //                                     <p style="text-align:right;">Customer ID: NDES${streetAddress}</p>
+    //                                     <p style="text-align:right;">Quote Expiration: ${formattedExpirationDate}</p><br>
+    //                                     <p style="text-align:right;">Number of Panels: ${panels}</p>
+    //                                     <p style="text-align:right;">Inverter Type: ${inverterType}</p>
+    //                                     <p style="text-align:right;">Online Monitoring Available: ${monitoring}</p>
+    //                                     <p style="text-align:right;">Squirrel Guard Installed: ${squirrelGuard}</p>
+    //                                     <p style="text-align:right;">Repair Work Needed: ${repairWork}</p>
+    //                                 </div>
+    //                             </div>
+    //                         </div>
+    //                     </div>
+    //                     <div id="invoice-bot">
+    //                         <p>Deposit Amount: $${depositAmount.toFixed(2)}</p>
+    //                         <table id="itemsTable">
+    //                           <thead>
+    //                               <tr>
+    //                                   <th>Quantity</th>
+    //                                   <th>Item</th>
+    //                                   <th>Amount</th>
+    //                               </tr>
+    //                           </thead>
+    //                           <tbody>
+    //                               ${itemListHTML}
+    //                           </tbody>
+    //                           <tfoot>
+    //                               <tr id="notesRow">
+    //                                   <td colspan="3" style="text-align:center; color:red;" id="notesDisplay">${notes}</td>
+    //                               </tr>
+    //                               <tr>
+    //                                   <th colspan="2" class="total">Sub Total</th>
+    //                                   <th class="total">$${totalAmount}</th>
+    //                               </tr>
+    //                               <tr>
+    //                                   <th colspan="2" class="HST">HST (13%)</th>
+    //                                   <th>$${hst.toFixed(2)}</th>
+    //                               </tr>
+    //                               <tr>
+    //                                   <th colspan="2" class="total">Total</th>
+    //                                   <th class="total">$${totalIncludingHST.toFixed(2)}</th>
+    //                               </tr>
+    //                           </tfoot>
+    //                       </table>
+    //                     </div>
+    //                     <div class="info1">
+    //                         <p style="color:blue; margin-left:3%;">Quotation prepared by: </p><br>
+    //                         <p style="margin-left:3%;">This is a quotation on the goods named above, subject to the conditions noted below:</p>
+    //                         <p> 1. Quote valid for 30 days and subject to field verification </p>
+    //                         <p>2. ${depositAmount} deposit required to start the job </p>
+    //                         <p> 3. email payment to info@newdawn-es.com </p><br>
+    //                         <p style="margin-left:3%;">To accept this quotation, sign here and return: _______________________________________________  </p><br>
+    //                     </div>
+    //                     <div class="legal">
+    //                         <p>HST#:844183327 RT0001</p>
+    //                         <p>Thank you for your business!</p>
+    //                         <p>D3 - 8865 Woodbine Ave., Suite 201, Markham, ON L3R 0R7</p>
+    //                         <p>Phone: 416-855-9377 | Fax: 416-477-5306</p>
+    //                         <p>Email: sales@newdawn-es.com | Web: www.newdawn-es.com</p>
+    //                     </div>
+    //                     <div class="photo">
+    //                         <div class="row">
+    //                             <div class="col-3">
+    //                                 <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/botp2016-j.png">
+    //                             </div>
+    //                             <div class="col-3">
+    //                                 <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/logo2_03.png">
+    //                             </div>
+    //                             <div class="col-3">
+    //                                 <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/logo4_03.png">
+    //                             </div>
+    //                             <div class="col-3">
+    //                                 <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/logo1_03.png">
+    //                             </div>
+    //                         </div>
+    //                     </div>
+    //                     <div class="phara">
+    //                         <p>
+    //                             New Dawn Energy Solutions is an energy auditor, custom designer and systems integrator of energy Systems for residential and
+    //                             commercial customers. We offer turnkey solutions and committed to providing our customers with the highest quality products,
+    //                             services and support from inception of a project through the entire project lifecycle. We help our clients find an energy
+    //                             solution that is best suited to our clients’ specific needs. Our holistic approach in evaluating customers’ need and
+    //                             implementing an appropriate energy solutions produce optimum results to our customers.
+    //                         </p><br>
+    //                         <p>
+    //                             Key personnel at New Dawn Energy Solutions have more than 100 year years of combined power industry experience and had
+    //                             designed & installed numerous energy systems. We continuously research the latest products in evolving solar and conservation
+    //                             technologies, identify and establish relationships with manufacturers to provide our customers with the best options for their
+    //                             power system needs. Our expertise and experience in interconnecting PV systems to the electrical grid allow projects to proceed
+    //                             without delay.
+    //                         </p><br>
+    //                         <p>
+    //                             We have been recognized by the Solar Power World, Home Stars and Trusted Pro organizations for the work we did in 2016, 2017.
+    //                             We possess A+ rating with Better Business Bureaus (BBB) and do read our customers’ reviews posted at Homestars and TrustedPros.
+    //                         </p>
+    //                     </div>
+    //                 </div>
+    //             </body>
+    //         </html>
+    //     `;
+
+    //     // Send email using EmailJS
+    //     emailjs.send({
+    //         service_id: 'service_n9p0iyj', // Replace with your actual service ID
+    //         template_id: 'template_8v652n9', // Replace with your actual template ID
+    //         template_params: {
+    //             'to_email': email,
+    //             'subject': 'Your Invoice',
+    //             'message': invoiceHtml
+    //         }
+    //     }).then(function(response) {
+    //         alert('Email sent successfully!');
+    //     }).catch(function(error) {
+    //         alert('Failed to send email: ' + JSON.stringify(error));
+    //     });
+    // }
+
+    async function sendEmail() {
+        try {
+            emailjs.init("80eu4j-JvfvgXlSGQ");
+
+            // Prepare template parameters
+            const templateParams = {
+                name: 'prasad',
+                email: 'bhanarkarprasad@gmail.com',
+                message: 'this is test mail'
+            };
+
+            // Send email
+            emailjs.sendForm('service_n9p0iyj', 'template_8v652n9', document.getElementById('invoiceForm'))
+                    .then((response) => {
+                        console.log('Success:', response);
+                        alert('Email sent successfully!');
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                        alert('Failed to send email. Please try again later.');
+                    });
+            // const response = await emailjs.send({
+            //     service_id: 'service_n9p0iyj',  // Replace with your actual service ID
+            //     template_id: 'template_8v652n9',      // Replace with your actual template ID
+            //     template_params: {
+            //         'to_email': document.getElementById('email').value,
+            //         'subject': 'Your Invoice',
+            //         'message': "Hi"  // Function to generate your invoice HTML
+            //     }
+            // });
+            //
+            // if (response.status === 200) {
+            //     alert('Email sent successfully!');
+            // } else {
+            //     alert('Failed to send email: ' + response.text);
+            // }
+        } catch (error) {
+            alert('Failed to send email: ' + error);
+        }
+    }
+
+    function createInvoice() {
+        const form = document.getElementById('invoiceForm');
+        const formData = new FormData(form);
+        const customerName = formData.get('customerName');
+        const streetAddress = formData.get('streetAddress');
+        const city = formData.get('city');
+        const postalCode = formData.get('postalCode');
+        const phone = formData.get('phone');
+        const email = formData.get('email');
+        const panels = formData.get('panels');
+        const inverterType = formData.get('inverterType');
+        const monitoring = formData.get('monitoring') ? 'Yes' : 'No';
+        const squirrelGuard = formData.get('squirrelGuard') ? 'Yes' : 'No';
+        const repairWork = formData.get('repairWork') ? 'Yes' : 'No';
+        const depositAmount = parseFloat(formData.get('depositAmount'));
+        const items = formData.getAll('item[]');
+        const notes = formData.get('notes');
+        const customItems = formData.getAll('customItem[]');
+        const quantities = formData.getAll('quantity[]');
+        const amounts = formData.getAll('amount[]');
+        const formattedExpirationDate = new Date(new Date().setDate(new Date().getDate() + 30)).toLocaleDateString();
+
+        let itemListHTML = '';
+        let totalAmount = 0;
+
+        items.forEach((item, index) => {
+            const itemName = item === 'Custom' ? customItems[index] : item;
+            const quantity = quantities[index];
+            const amount = parseFloat(amounts[index]);
+            totalAmount += amount;
+            itemListHTML += `
+                <tr>
+                    <td>${quantity}</td>
+                    <td>${itemName}</td>
+                    <td>$${amount.toFixed(2)}</td>
+                </tr>
+            `;
+        });
+
+        const hst = totalAmount * 0.13; // Assuming HST is 13%
+        const totalIncludingHST = totalAmount + hst;
+
+        const hstHtml = `
+            <tr>
+                <th colspan="2" style="float:right;">HST (13%)</th>
+                <th>$${hst.toFixed(2)}</th>
+            </tr>
+        `;
+
+        const invoiceHtml = `
+            <html>
+                <head>
+                    <title>Invoice</title>
+                    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,900,700,500,300,100">
+                    <style>
+                       /*! CSS Used from: Embedded */
+#invoice-top,#invoice-bot{padding:20px;}
+.row{display:flex;justify-content:space-between;}
+.column{padding-left:0px;margin-left:0px;}
+.left-column{width:66.66%;}
+.right-column{width:33.33%;}
+.logo{width:100px;height:100px;background:url('https://www.gta-solar.com/wp-content/themes/newdawner221/images/main-logo.png') no-repeat;background-size:contain;margin-bottom:20px;}
+.info p,.title p{margin-bottom:10px;}
+.info p,.title p{font-size:14px;color:#666;}
+table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+thead{background-color:#f2f2f2;}
+thead th{padding:10px;text-align:left;border-bottom:1px solid #ddd;}
+tbody td{padding:10px;border-bottom:1px solid #ddd;}
+tfoot{background-color:#f9f9f9;}
+tfoot th,tfoot td{padding:10px;text-align:right;border-top:1px solid #ddd;}
+tfoot .total{font-weight:bold;}
+tfoot #notesRow{font-size:21px;color:red;font-style:bold;}
+@media (max-width: 768px){
+table{font-size:14px;}
+thead th,tbody td,tfoot th,tfoot td{padding:8px;}
+}
+.total{font-size:18px;font-weight:bold;color:#333;}
+.legal{font-size:14px;color:#999;text-align:center;}
+.info1{font-size:14px;color:#999;margin-left:3%;margine-bottom:0%;}
+.banner{width:100%;height:auto;}
+.heading{text-align:center;font-size:12px;}
+.photo{width:100%;display:flex;justify-content:center;}
+.images{padding:1%;}
+.phara{width:93%;margin:auto;text-align:justify;padding-bottom:12%;}
+                    </style>
+                </head>
+                <body>
+                    <div class="invoice-container">
+                        <div id="invoice-top">
+                            <div class="row">
+                                <div class="column left-column">
+                                    <div class="info">
+                                        <div class="logo">
+                                            <img src="https://www.gta-solar.com/wp-content/themes/newdawner221/images/main-logo.png">
+                                        </div>
+                                        <p style="font-size:12px;">Harness the power all around us and make the world better place for everyone</p>
+                                        <p>Tel: 416-855-9377  |   Fax: 416-477-5306  |    sales@newdawn-es.com</p>
+                                        <label>To: </label>
+                                        <p>${customerName}</p>
+                                        <p>${streetAddress}</p>
+                                        <p>${city}, ${postalCode}</p>
+                                        <p>Phone: ${phone}</p>
+                                        <p>Email: ${email}</p>
+                                    </div>
+                                </div>
+                                <div class="column right-column">
+                                    <div class="title">
+                                        <p style="font-style:italic; font-size:66px; margin:0px; color:grey; text-align:right;">Quote</p>
+                                        <p style="text-align:right;">Date: ${new Date().toLocaleDateString()}</p>
+                                        <p style="text-align:right;">Customer ID: NDES${streetAddress}</p>
+                                        <p style="text-align:right;">Quote Expiration: ${formattedExpirationDate}</p><br>
+                                        <p style="text-align:right;">Number of Panels: ${panels}</p>
+                                        <p style="text-align:right;">Inverter Type: ${inverterType}</p>
+                                        <p style="text-align:right;">Online Monitoring Available: ${monitoring}</p>
+                                        <p style="text-align:right;">Squirrel Guard Installed: ${squirrelGuard}</p>
+                                        <p style="text-align:right;">Repair Work Needed: ${repairWork}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="invoice-bot">
+                            <p>Deposit Amount: $${depositAmount.toFixed(2)}</p>
+                            <table id="itemsTable" style="margin-bottom:0px !important;">
+                              <thead>
+                                  <tr>
+                                      <th>Quantity</th>
+                                      <th>Item</th>
+                                      <th>Amount</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  ${itemListHTML}
+                              </tbody>
+                              <tfoot>
+                                  <tr id="notesRow">
+                                      <td colspan="3" style="text-align:center; color:red;" id="notesDisplay">${notes}</td>
+                                  </tr>
+                                  <tr>
+                                      <th colspan="2" class="total">Sub Total</th>
+                                      <th class="total">$${totalAmount}</th>
+                                  </tr>
+                                  <tr>
+                                      <th colspan="2" class="HST">HST (13%)</th>
+                                      <th>$${hst.toFixed(2)}</th>
+                                  </tr>
+                                  <tr>
+                                      <th colspan="2" class="total">Total</th>
+                                      <th class="total">$${totalIncludingHST.toFixed(2)}</th>
+                                  </tr>
+                              </tfoot>
+                          </table>
+
+                        </div>
+                            <div class="info1">
+                                <p style="color:blue; margin-left:3%;">Quotation prepared by: </p>
+                                <p style="margin-left:3%;">This is a quotation on the goods named above, subject to the conditions noted below:</p>
+                                <p style="margin-left:3%;"> 1. Quote valid for 30 days and subject to field verification </p>
+                                <p style="margin-left:3%;">2. ${depositAmount} deposit required to start the job </p>
+                                <p style="margin-left:3%;"> 3. email payment to info@newdawn-es.com </p>
+                                <p style="margin-left:3%;">To accept this quotation, sign here and return: _______________________________________________  </p><br>
+                            </div>
+                            <div class="legal">
+                                <p>HST#:844183327 RT0001</p>
+                                <p>Thank you for your business!</p>
+                                <p>D3 - 8865 Woodbine Ave, Suite 102, Markham, ON L3R 5G1, Canada</p><br>
+                            </div>
+                            <div class="banner">
+                                <img src='banner.jpg' width="100%">
+                            </div>
+                            <div class="heading">
+                                <h1>COMPANY PROFILE - NEW DAWN ENERGY SOLUTIONS</h1>
+                            </div>
+                            <div class="photo">
+                                <div class="row">
+                                    <div class="col-3">
+                                        <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/botp2016-j.png">
+                                    </div>
+                                    <div class="col-3">
+                                        <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/logo2_03.png">
+                                    </div>
+                                    <div class="col-3">
+                                        <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/logo4_03.png">
+                                    </div>
+                                    <div class="col-3">
+                                        <img style="padding:3%;" class="images" src="https://newdawn-es.com/wp-content/uploads/2016/12/logo1_03.png">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="phara">
+                                <p>
+                                    New Dawn Energy Solutions is an energy auditor, custom designer and systems integrator of energy Systems for residential and
+                                    commercial customers. We offer turnkey solutions and committed to providing our customers with the highest quality products,
+                                    services and support from inception of a project through the entire project lifecycle. We help our clients find an energy
+                                    solution that is best suited to our clients’ specific needs. Our holistic approach in evaluating customers’ need and
+                                    implementing an appropriate energy solutions produce optimum results to our customers.
+                                </p>
+                                <p>
+                                    Key personnel at New Dawn Energy Solutions have more than 100 year years of combined power industry experience and had
+                                    designed & installed numerous energy systems. We continuously research the latest products in evolving solar and conservation
+                                    technologies, identify and establish relationships with manufacturers to provide our customers with the best options for their
+                                    power system needs. Our expertise and experience in interconnecting PV systems to the electrical grid allow projects to proceed
+                                    without delay.
+                                </p>
+                                <p>
+                                    We have been recognized by the Solar Power World, Home Stars and Trusted Pro organizations for the work we did in 2016, 2017.
+                                    We possess A+ rating with Better Business Bureaus (BBB) and do read our customers’ reviews posted at Homestars and TrustedPros.
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                </html>
+            `;
+        return invoiceHtml;
+    }
+
+</script>
+
+<!-- Add Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.8.4/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.8.4/firebase-firestore.js"></script>
+
+
+</body>
+</html>
